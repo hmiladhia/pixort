@@ -12,12 +12,12 @@ click==8.1.7
     # via typer
 colorama==0.4.6
     # via click
+hachoir==3.3.0
+    # via pixort
 markdown-it-py==3.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-pillow==10.3.0
-    # via pixort
 pygments==2.18.0
     # via rich
 rich==13.7.1

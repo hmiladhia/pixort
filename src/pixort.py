@@ -8,11 +8,10 @@ from typing import Annotated, Optional
 
 import typer as tp
 from rich.progress import track
-from PIL import Image, ExifTags
 
-
-DATETIME_KEY = ExifTags.Base.DateTime
-ORIGINAL_DATETIME_KEY = ExifTags.Base.DateTimeOriginal
+from hachoir.parser import createParser
+from hachoir.metadata import extractMetadata
+from hachoir.metadata.metadata import Metadata
 
 
 def pixsort(
@@ -33,13 +32,34 @@ def pixsort(
         move_or_copy(file, dest_path, do_copy=copy)
 
 
-def get_date_taken(path: Path) -> Optional[datetime]:
-    # Try regex first
+def _get_keys(metadata: Metadata, *keys) -> Optional[datetime]:
+    for key in keys:
+        if not metadata.has(key):
+            continue
 
-    with Image.open(str(path)) as pil_img:
-        exif = pil_img.getexif()
-        if exif_date := exif.get(DATETIME_KEY, exif.get(ORIGINAL_DATETIME_KEY, None)):
-            return datetime.strptime(exif_date, f"%Y:%m:%d %H:%M:%S")
+        return metadata.get(key)
+
+    return None
+
+
+def extract_date(video_file: Path) -> Optional[datetime]:
+    parser = createParser(video_file.as_posix())
+    metadata = extractMetadata(parser)
+
+    return _get_keys(
+        metadata,
+        "date_time_original",
+        "date_time_digitized",
+        "last_modification",
+        "creation_date",
+    )
+
+
+def get_date_taken(path: Path) -> Optional[datetime]:
+    # TODO: Try regex first
+
+    if exif_date := extract_date(path):
+        return exif_date
 
     return datetime.fromtimestamp(os.path.getmtime(path))
 

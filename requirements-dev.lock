@@ -13,6 +13,8 @@ click==8.1.7
 colorama==0.4.6
     # via click
     # via pytest
+hachoir==3.3.0
+    # via pixort
 iniconfig==2.0.0
     # via pytest
 markdown-it-py==3.0.0
@@ -21,8 +23,6 @@ mdurl==0.1.2
     # via markdown-it-py
 packaging==24.0
     # via pytest
-pillow==10.3.0
-    # via pixort
 pluggy==1.5.0
     # via pytest
 pygments==2.18.0

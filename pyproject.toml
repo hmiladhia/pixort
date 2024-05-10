@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
     "typer[standard]>=0.12.0",
-    "pillow>=10.0.0",
+    "hachoir>=3.3.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -16,9 +16,9 @@ requires-python = ">= 3.8"
 cli = [
     "click==8.1.7",
     "colorama==0.4.6",
+    "hachoir==3.3.0",
     "markdown-it-py==3.0.0",
     "mdurl==0.1.2",
-    "pillow==10.3.0",
     "pygments==2.18.0",
     "rich==13.7.1",
     "shellingham==1.5.4",
