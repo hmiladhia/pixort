@@ -45,3 +45,13 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 only-packages = true
 packages = ["src/pixort.py"]
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
