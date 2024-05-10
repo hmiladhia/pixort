@@ -105,6 +105,9 @@ def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False):
 
 
 def main():
+    from hachoir.core import config
+
+    config.quiet = True
     tp.run(pixsort)
 
 
