@@ -19,8 +19,12 @@ from PIL import Image, ExifTags
 DATETIME_KEY = ExifTags.Base.DateTime
 ORIGINAL_DATETIME_KEY = ExifTags.Base.DateTimeOriginal
 
+__author__ = "Dhia Hmila"
+__version__ = "0.1.1"
+__all__ = ["pixort", "get_date_taken"]
 
-def pixsort(
+
+def pixort(
     path: Annotated[str, tp.Argument()] = ".",
     output: Annotated[str, tp.Option("--output", "-o")] = None,
     copy: Annotated[bool, tp.Option("--copy", "-c")] = False,
@@ -129,7 +133,7 @@ def main():
     from hachoir.core import config
 
     config.quiet = True
-    tp.run(pixsort)
+    tp.run(pixort)
 
 
 if __name__ == "__main__":
