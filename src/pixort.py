@@ -9,9 +9,15 @@ from typing import Annotated, Optional
 import typer as tp
 from rich.progress import track
 
+import filetype
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 from hachoir.metadata.metadata import Metadata
+from PIL import Image, ExifTags
+
+
+DATETIME_KEY = ExifTags.Base.DateTime
+ORIGINAL_DATETIME_KEY = ExifTags.Base.DateTimeOriginal
 
 
 def pixsort(
@@ -42,8 +48,8 @@ def _get_keys(metadata: Metadata, *keys) -> Optional[datetime]:
     return None
 
 
-def extract_date(video_file: Path) -> Optional[datetime]:
-    parser = createParser(video_file.as_posix())
+def extract_hachoir_date(file: Path) -> Optional[datetime]:
+    parser = createParser(file.as_posix())
     metadata = extractMetadata(parser)
 
     return _get_keys(
@@ -55,10 +61,25 @@ def extract_date(video_file: Path) -> Optional[datetime]:
     )
 
 
+def extract_pillow_date(file: Path) -> Optional[datetime]:
+    with Image.open(str(file)) as pil_img:
+        exif = pil_img.getexif()
+        if exif_date := exif.get(ORIGINAL_DATETIME_KEY, exif.get(DATETIME_KEY, None)):
+            return datetime.strptime(exif_date, "%Y:%m:%d %H:%M:%S")
+
+    return None
+
+
 def get_date_taken(path: Path) -> Optional[datetime]:
     # TODO: Try regex first
 
-    if exif_date := extract_date(path):
+    # Could use hachoir for both video and image
+    # but pillow is much faster
+    if filetype.is_image(path) and (exif_date := extract_pillow_date(path)):
+        return exif_date
+    elif (filetype.is_video(path) or filetype.is_audio(path)) and (
+        exif_date := extract_hachoir_date(path)
+    ):
         return exif_date
 
     return datetime.fromtimestamp(os.path.getmtime(path))
