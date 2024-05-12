@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 import shutil
+import concurrent.futures
 from pathlib import Path
 from datetime import datetime
+from functools import partial
 from typing import Annotated, Optional
 
 import typer as tp
@@ -20,28 +22,37 @@ DATETIME_KEY = ExifTags.Base.DateTime
 ORIGINAL_DATETIME_KEY = ExifTags.Base.DateTimeOriginal
 
 __author__ = "Dhia Hmila"
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __all__ = ["pixort", "get_date_taken"]
 
 
 def pixort(
     path: Annotated[str, tp.Argument()] = ".",
     output: Annotated[str, tp.Option("--output", "-o")] = None,
+    n_workers: Annotated[int, tp.Option("--workers", "-w")] = 1,
     copy: Annotated[bool, tp.Option("--copy", "-c")] = False,
-):
-    src_path = Path(path).resolve()
+) -> list[bool]:
     target_path = Path(output or path)
 
-    file_list = list(iter_files(path))
-    for file in track(file_list, description="Processing...\n"):
-        # TODO: filter extensions / mime_types
+    process_func = partial(process_one, target_path, copy)
+    files_list = list(iter_files(path))
 
-        date = get_date_taken(src_path / file)
-        dest_path = from_date_to_path(target_path, date)
+    if n_workers == 1:
+        return [process_func(file) for file in track(files_list)]
 
-        move_or_copy(file, dest_path, do_copy=copy)
+    with concurrent.futures.ThreadPoolExecutor(n_workers) as ex:
+        futures = [ex.submit(process_func, file) for file in files_list]
+
+        return [
+            f.result()
+            for f in track(
+                concurrent.futures.as_completed(futures),
+                total=len(futures),
+            )
+        ]
 
 
+# -- Date Extraction --
 def _get_keys(metadata: Metadata, *keys) -> Optional[datetime]:
     for key in keys:
         if not metadata.has(key):
@@ -52,8 +63,8 @@ def _get_keys(metadata: Metadata, *keys) -> Optional[datetime]:
     return None
 
 
-def extract_hachoir_date(file: Path) -> Optional[datetime]:
-    parser = createParser(file.as_posix())
+def extract_hachoir_date(file: str) -> Optional[datetime]:
+    parser = createParser(file)
     metadata = extractMetadata(parser)
 
     return _get_keys(
@@ -65,7 +76,7 @@ def extract_hachoir_date(file: Path) -> Optional[datetime]:
     )
 
 
-def extract_pillow_date(file: Path) -> Optional[datetime]:
+def extract_pillow_date(file: str) -> Optional[datetime]:
     with Image.open(str(file)) as pil_img:
         exif = pil_img.getexif()
         if exif_date := exif.get(ORIGINAL_DATETIME_KEY, exif.get(DATETIME_KEY, None)):
@@ -74,7 +85,7 @@ def extract_pillow_date(file: Path) -> Optional[datetime]:
     return None
 
 
-def get_date_taken(path: Path) -> Optional[datetime]:
+def get_date_taken(path: str) -> Optional[datetime]:
     # TODO: Try regex first
 
     # Could use hachoir for both video and image
@@ -89,6 +100,7 @@ def get_date_taken(path: Path) -> Optional[datetime]:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
+# -- Workers --
 def iter_files(path: str | Path):
     src_path = Path(path).resolve()
     for file in src_path.glob("**/*"):
@@ -98,6 +110,16 @@ def iter_files(path: str | Path):
         yield file
 
 
+def process_one(target_path: Path, copy: bool, file: Path) -> bool:
+    # TODO: filter extensions / mime_types
+
+    date = get_date_taken(file.as_posix())
+    dest_path = from_date_to_path(target_path, date)
+
+    return move_or_copy(file, dest_path, do_copy=copy)
+
+
+# -- Move to Target --
 def from_date_to_path(path: Path, date: datetime) -> Path:
     candidate_month = path / f"{date.year}-{date.month:0>2}"
     candidate_day = f"{date.day:0>2}"
@@ -117,7 +139,7 @@ def from_date_to_path(path: Path, date: datetime) -> Path:
     return candidate_month / candidate_day
 
 
-def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False):
+def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False) -> bool:
     # Create if not exists
     dest_path.parent.mkdir(exist_ok=True)
     dest_path.mkdir(exist_ok=True)
@@ -128,7 +150,10 @@ def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False):
     else:
         shutil.move(src_file, dest_path / src_file.name)
 
+    return True
 
+
+# -- CLI --
 def main():
     from hachoir.core import config
 
