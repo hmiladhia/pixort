@@ -29,7 +29,7 @@ __all__ = ["pixort", "get_date_taken"]
 def pixort(
     path: Annotated[str, tp.Argument()] = ".",
     output: Annotated[str, tp.Option("--output", "-o")] = None,
-    n_workers: Annotated[int, tp.Option("--workers", "-w")] = 1,
+    n_workers: Annotated[Optional[int], tp.Option("--workers", "-w")] = None,
     copy: Annotated[bool, tp.Option("--copy", "-c")] = False,
 ) -> list[bool]:
     target_path = Path(output or path)
