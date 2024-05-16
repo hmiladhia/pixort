@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import concurrent.futures
 from pathlib import Path
@@ -25,6 +26,10 @@ __author__ = "Dhia Hmila"
 __version__ = "0.2.1"
 __all__ = ["pixort", "get_date_taken"]
 
+_DATE_REGEX = re.compile(
+    "(?P<year>\d{4}):(?P<month>\d{2}):(?P<day>\d{2})(?P<etc>\s\d{2}:\d{2}:\d{2})"
+)
+
 
 def pixort(
     path: Annotated[str, tp.Argument()] = ".",
@@ -36,7 +41,7 @@ def pixort(
     target_path = Path(output or path)
 
     process_func = partial(
-        process_one, target_path, copy, set(excluded_extensions) or set()
+        process_one, target_path, copy, set(excluded_extensions or {})
     )
     files_list = list(iter_files(path))
 
@@ -79,10 +84,27 @@ def extract_hachoir_date(file: str) -> Optional[datetime]:
     )
 
 
+def _try_hard(exif_date: str) -> str:
+    if not (match := _DATE_REGEX.match(exif_date)):
+        return None
+
+    year, month, day, etc = map(match.group, ["year", "month", "day", "etc"])
+    if int(month) == 0:
+        month = "01"
+    if int(day) == 0:
+        day = "01"
+
+    return f"{year}:{month}:{day}{etc}"
+
+
 def extract_pillow_date(file: str) -> Optional[datetime]:
     with Image.open(str(file)) as pil_img:
         exif = pil_img.getexif()
-        if exif_date := exif.get(ORIGINAL_DATETIME_KEY, exif.get(DATETIME_KEY, None)):
+        exif_date = exif.get(ORIGINAL_DATETIME_KEY, exif.get(DATETIME_KEY, None))
+        if exif_date is None:
+            return exif_date
+
+        if exif_date := _try_hard(exif_date):
             return datetime.strptime(exif_date, "%Y:%m:%d %H:%M:%S")
 
     return None
