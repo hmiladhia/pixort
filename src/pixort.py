@@ -22,7 +22,7 @@ DATETIME_KEY = ExifTags.Base.DateTime
 ORIGINAL_DATETIME_KEY = ExifTags.Base.DateTimeOriginal
 
 __author__ = "Dhia Hmila"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["pixort", "get_date_taken"]
 
 
@@ -128,7 +128,7 @@ def process_one(
 # -- Move to Target --
 def from_date_to_path(path: Path, date: datetime) -> Path:
     candidate_month = path / f"{date.year}-{date.month:0>2}"
-    candidate_day = f"{date.day:0>2}"
+    candidate_day = f"{date.year}-{date.month:0>2}-{date.day:0>2}"
 
     if not candidate_month.exists():
         return candidate_month / candidate_day
@@ -152,7 +152,7 @@ def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False) -> bool
 
     # Move file
     if do_copy:
-        shutil.copyfile(src_file, dest_path / src_file.name)
+        shutil.copy2(src_file, dest_path / src_file.name)
     else:
         shutil.move(src_file, dest_path / src_file.name)
 
