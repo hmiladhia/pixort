@@ -30,11 +30,14 @@ def pixort(
     path: Annotated[str, tp.Argument()] = ".",
     output: Annotated[str, tp.Option("--output", "-o")] = None,
     n_workers: Annotated[Optional[int], tp.Option("--workers", "-w")] = None,
+    excluded_extensions: Annotated[list[str], tp.Option("--exclude", "-e")] = None,
     copy: Annotated[bool, tp.Option("--copy", "-c")] = False,
 ) -> list[bool]:
     target_path = Path(output or path)
 
-    process_func = partial(process_one, target_path, copy)
+    process_func = partial(
+        process_one, target_path, copy, set(excluded_extensions) or set()
+    )
     files_list = list(iter_files(path))
 
     if n_workers == 1:
@@ -110,8 +113,11 @@ def iter_files(path: str | Path):
         yield file
 
 
-def process_one(target_path: Path, copy: bool, file: Path) -> bool:
-    # TODO: filter extensions / mime_types
+def process_one(
+    target_path: Path, copy: bool, excluded_extensions: set, file: Path
+) -> bool:
+    if file.suffix in excluded_extensions:
+        return False
 
     date = get_date_taken(file.as_posix())
     dest_path = from_date_to_path(target_path, date)
