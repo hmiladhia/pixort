@@ -66,7 +66,11 @@ def _get_keys(metadata: Metadata, *keys) -> Optional[datetime]:
         if not metadata.has(key):
             continue
 
-        return metadata.get(key)
+        value = metadata.get(key)
+        if value.year <= 1970:
+            continue
+
+        return value
 
     return None
 
