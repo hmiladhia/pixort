@@ -150,21 +150,24 @@ def process_one(
 # -- Move to Target --
 def from_date_to_path(path: Path, date: datetime) -> Path:
     candidate_month = path / f"{date.year}-{date.month:0>2}"
-    candidate_day = f"{date.year}-{date.month:0>2}-{date.day:0>2}"
+    candidate_day_pattern = re.compile(
+        f"^({date.year}-)?({date.month:0>2}-)?{date.day:0>2}\\s-"
+    )
 
     if not candidate_month.exists():
-        return candidate_month / candidate_day
+        return candidate_month
 
-    candidate_day = next(
+    if candidate_day := next(
         (
             day.name
             for day in candidate_month.iterdir()
-            if day.name.startswith(f"{candidate_day} -")
+            if candidate_day_pattern.match(day.name)
         ),
-        candidate_day,
-    )
+        None,
+    ):
+        return candidate_month / candidate_day
 
-    return candidate_month / candidate_day
+    return candidate_month
 
 
 def move_or_copy(src_file: Path, dest_path: Path, do_copy: bool = False) -> bool:
